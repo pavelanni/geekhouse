@@ -8,7 +8,7 @@ It's one thing to work with a bunch of sensors connected to your breadboard, but
 
 ## Features
 
-- HATEOAS-compliant REST API
+- HATEOAS-compliant REST API (see [Wikipedia](https://en.wikipedia.org/wiki/HATEOAS))
 - Modular architecture
 - Sensor calibration support
 - Dynamic device configuration
@@ -17,7 +17,7 @@ It's one thing to work with a bunch of sensors connected to your breadboard, but
 
 ## Hardware Requirements
 
-- Raspberry Pi Pico W (or compatible microcontroller)
+- Raspberry Pi Pico W (or compatible microcontroller with WiFi)
 - Supported sensors:
   - ADC-based sensors (light, temperature)
   - Digital sensors (touch, motion)
@@ -30,8 +30,8 @@ It's one thing to work with a bunch of sensors connected to your breadboard, but
 
 ## Software Requirements
 
-- MicroPython (Latest version recommended)
-- Microdot web framework
+- [MicroPython](https://docs.micropython.org/en/latest/rp2/quickref.html#installation) (latest version recommended)
+- [Microdot](https://microdot.dev/getting-started.html) web framework
 - Development machine with Python 3.x (for configuration tools)
 
 ## Project Structure
@@ -165,6 +165,8 @@ Response: {
 
 ### Reading a Sensor
 
+Using Python:
+
 ```python
 import requests
 
@@ -174,7 +176,15 @@ data = response.json()
 print(f"Light level: {data['data']['calibrated_value']} {data['data']['unit']}")
 ```
 
+Using `curl`:
+
+```bash
+curl http://your-device-ip/sensors/roof_light/value
+```
+
 ### Controlling an LED
+
+Using Python:
 
 ```python
 import requests
@@ -183,6 +193,12 @@ import requests
 response = requests.post('http://your-device-ip/leds/yellow_roof/toggle')
 data = response.json()
 print(f"LED state: {'ON' if data['data']['state'] else 'OFF'}")
+```
+
+Using `curl`:
+
+```bash
+curl -X POST http://your-device-ip/leds/yellow_roof/toggle
 ```
 
 ## Development
