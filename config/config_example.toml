@@ -1,0 +1,66 @@
+# WiFi Configuration
+[wifi]
+ssid = "Your WiFi SSID"
+password = "Your WiFi Password"
+
+# Server Configuration
+[server]
+port = 80
+
+# LED Configuration
+[leds.yellow_roof]
+pin = 2
+color = "yellow"
+location = "roof"
+type = "led"
+
+[leds.white_garden]
+pin = 3
+color = "white"
+location = "garden"
+type = "led"
+
+# Sensor Configuration
+[sensors.roof_water]
+pin = 1
+type = "water"
+location = "roof"
+unit = "level"
+adc = true
+
+[sensors.roof_water.config]
+type = "linear"
+params = { m = 1.0, b = 0.0 }
+
+[sensors.roof_light]
+pin = 0
+type = "light"
+location = "roof"
+unit = "lux"
+adc = true
+
+[sensors.roof_light.config]
+type = "polynomial"
+params = { coefficients = [0.0, 0.1] }
+
+[sensors.temp_internal]
+pin = 4
+type = "temperature"
+location = "internal"
+unit = "celsius"
+adc = true
+
+[sensors.temp_internal.config]
+type = "linear"
+params = { m = 0.0124, b = -20.5 }
+
+[sensors.garden_light]
+pin = 26
+type = "light"
+location = "garden"
+unit = "lux"
+adc = true
+
+[sensors.garden_light.config]
+type = "polynomial"
+params = { coefficients = [0.0, 0.1] }
