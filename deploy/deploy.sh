@@ -1,5 +1,6 @@
 #!/bin/bash
 # ./deploy/deploy.sh
+set -e
 
 # Get the project root directory (parent of deploy dir)
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

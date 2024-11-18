@@ -111,24 +111,52 @@ password = "YourPassword"
 port = 80
 
 # LED Configuration
-[leds.yellow_roof]
+[leds.1]
 pin = 2
 color = "yellow"
 location = "roof"
 type = "led"
 
 # Sensor Configuration
-[sensors.roof_light]
+[sensors.1]
 pin = 0
 type = "light"
 location = "roof"
 unit = "lux"
 adc = true
 
-[sensors.roof_light.config]
+[sensors.1.config]
 type = "polynomial"
 params = { coefficients = [0.0, 0.1] }
 ```
+
+### Sensor Calibration
+
+#### Internal temperature sensor
+
+The internal temperature sensor is connected to the ADC pin 4.
+It gives us a voltage value which we need to convert to temperature.
+
+The maximum voltage is 3.3V and the ADC resolution is 16-bit (65535).
+
+According to the datasheet, when it's 27 degrees Celsius, the voltage is around 0.706V,
+and for every degree the temperature changes, the voltage goes up or down by about 1.721mV.
+
+This gives us a calibration formula:
+
+```none
+T = 27 - (ADC_voltage - 0.706)/0.001721
+```
+
+Where `ADC_voltage` is: `ADC value / 65535 * 3.3` (ADC value is a 16-bit number and 3.3 is the ADC reference voltage).
+
+This can be simplified to:
+
+```none
+T = -0.02926 * V + 437.2
+```
+
+For this example, the calibration type is `linear` and the parameters are `m = -0.02926` and `b = 437.2`.
 
 ## API Documentation
 
