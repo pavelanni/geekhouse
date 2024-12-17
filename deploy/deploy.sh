@@ -32,7 +32,7 @@ done <mp_requirements.txt
 
 # Copy source files
 echo "Copying source files..."
-mpremote cp -r src/* :
+mpremote cp -r src/server/* :
 
 # Copy converted config
 echo "Copying config..."

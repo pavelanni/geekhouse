@@ -8,6 +8,7 @@ class ConfigHandler:
         self.server_config = {}
         self.leds = {}
         self.sensors = {}
+        self.motors = {}
 
     def load_config(self):
         """Load configuration from JSON file"""
@@ -28,6 +29,15 @@ class ConfigHandler:
                     "type": led_config["type"]
                 }
 
+            # Initialize Motors
+            for motor_id, motor_config in config.get('motors', {}).items():
+                self.motors[motor_id] = {
+                    "pin_on": Pin(motor_config["pin_on"], Pin.OUT),
+                    "pin_dir": Pin(motor_config["pin_dir"], Pin.OUT),
+                    "type": motor_config["type"],
+                    "location": motor_config["location"]
+                }
+
             # Initialize Sensors
             for sensor_id, sensor_config in config.get('sensors', {}).items():
                 pin_class = ADC if sensor_config.get("adc", False) else Pin
@@ -39,7 +49,7 @@ class ConfigHandler:
                     "config": sensor_config.get("config", {})
                 }
 
-            print(f"Configuration loaded: {len(self.leds)} LEDs, {len(self.sensors)} sensors")
+            print(f"Configuration loaded: {len(self.leds)} LEDs, {len(self.sensors)} sensors, {len(self.motors)} motors")
             return True
         except Exception as e:
             print(f"Error loading configuration: {str(e)}")
@@ -51,6 +61,7 @@ class ConfigHandler:
             "wifi": self.wifi_config,
             "server": self.server_config,
             "leds": {},
+            "motors": {},
             "sensors": {}
         }
 
@@ -61,6 +72,15 @@ class ConfigHandler:
                 "color": led_info["color"],
                 "location": led_info["location"],
                 "type": led_info["type"]
+            }
+
+        # Save motor configurations
+        for motor_id, motor_info in self.motors.items():
+            config["motors"][motor_id] = {
+                "pin_on": motor_info["pin_on"].id(),
+                "pin_dir": motor_info["pin_dir"].id(),
+                "type": motor_info["type"],
+                "location": motor_info["location"]
             }
 
         # Save sensor configurations

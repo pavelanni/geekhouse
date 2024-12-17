@@ -1,6 +1,6 @@
 from utils import create_response, apply_calibration
 import json
-
+import asyncio
 class Routes:
     def __init__(self, app, config_handler):
         self.app = app
@@ -14,13 +14,14 @@ class Routes:
             links = {
                 "self": {"href": "/"},
                 "leds": {"href": "/leds"},
+                "motors": {"href": "/motors"},
                 "sensors": {"href": "/sensors"},
                 "status": {"href": "/status"}
             }
             return create_response({"message": "Welcome to IoT API"}, links)
 
         @self.app.route('/leds')
-        async def get_leds(request):
+        async def leds_list(request):
             """Get all LEDs with their metadata and available actions"""
             led_data = {}
             for led_id, led_info in self.config.leds.items():
@@ -30,6 +31,8 @@ class Routes:
                     "state": led_info["pin"].value(),
                     "_links": {
                         "self": {"href": f"/leds/{led_id}"},
+                        "on": {"href": f"/leds/{led_id}/on"},
+                        "off": {"href": f"/leds/{led_id}/off"},
                         "toggle": {"href": f"/leds/{led_id}/toggle"},
                     }
                 }
@@ -45,7 +48,7 @@ class Routes:
             return create_response(led_data, links)
 
         @self.app.route('/leds/filter')
-        async def filter_leds(request):
+        async def leds_filter(request):
             """Filter LEDs by color or location"""
             color = request.args.get('color')
             location = request.args.get('location')
@@ -72,8 +75,88 @@ class Routes:
 
             return create_response(filtered_leds, links)
 
+        @self.app.route('/leds/<led_id>', methods=['GET'])
+        async def led_state(request, led_id):
+            """Get LED state"""
+            if led_id not in self.config.leds:
+                return create_response(
+                    {"error": f"Invalid LED: {led_id}"},
+                    {"all_leds": {"href": "/leds"}}
+                )
+
+            led = self.config.leds[led_id]["pin"]
+
+            return create_response(
+                {
+                    "id": led_id,
+                    "state": led.value(),
+                    "color": self.config.leds[led_id]["color"],
+                    "location": self.config.leds[led_id]["location"]
+                },
+                {
+                    "toggle": {"href": f"/leds/{led_id}/toggle"},
+                    "on": {"href": f"/leds/{led_id}/on"},
+                    "off": {"href": f"/leds/{led_id}/off"},
+                    "led": {"href": f"/leds/{led_id}"},
+                    "all_leds": {"href": "/leds"}
+                }
+            )
+
+        @self.app.route('/leds/<led_id>/on', methods=['POST'])
+        async def led_on(request, led_id):
+            """Turn LED on"""
+            if led_id not in self.config.leds:
+                return create_response(
+                    {"error": f"Invalid LED: {led_id}"},
+                    {"all_leds": {"href": "/leds"}}
+                )
+
+            led = self.config.leds[led_id]["pin"]
+            led.on()
+
+            return create_response(
+                {
+                    "id": led_id,
+                    "state": led.value(),
+                    "color": self.config.leds[led_id]["color"],
+                    "location": self.config.leds[led_id]["location"]
+                },
+                {
+                    "self": {"href": f"/leds/{led_id}/toggle"},
+                    "led": {"href": f"/leds/{led_id}"},
+                    "all_leds": {"href": "/leds"}
+                }
+            )
+
+
+        @self.app.route('/leds/<led_id>/off', methods=['POST'])
+        async def led_off(request, led_id):
+            """Turn LED off"""
+            if led_id not in self.config.leds:
+                return create_response(
+                    {"error": f"Invalid LED: {led_id}"},
+                    {"all_leds": {"href": "/leds"}}
+                )
+
+            led = self.config.leds[led_id]["pin"]
+            led.off()
+
+            return create_response(
+                {
+                    "id": led_id,
+                    "state": led.value(),
+                    "color": self.config.leds[led_id]["color"],
+                    "location": self.config.leds[led_id]["location"]
+                },
+                {
+                    "self": {"href": f"/leds/{led_id}/toggle"},
+                    "led": {"href": f"/leds/{led_id}"},
+                    "all_leds": {"href": "/leds"}
+                }
+            )
+
         @self.app.route('/leds/<led_id>/toggle', methods=['POST'])
-        async def toggle_led(request, led_id):
+        async def led_toggle(request, led_id):
             """Toggle LED state"""
             if led_id not in self.config.leds:
                 return create_response(
@@ -99,7 +182,7 @@ class Routes:
             )
 
         @self.app.route('/sensors')
-        async def get_sensors(request):
+        async def sensors_list(request):
             """Get all sensors with their metadata and available actions"""
             sensor_data = {}
             for sensor_id, sensor_info in self.config.sensors.items():
@@ -125,7 +208,7 @@ class Routes:
             return create_response(sensor_data, links)
 
         @self.app.route('/sensors/filter')
-        async def filter_sensors(request):
+        async def sensors_filter(request):
             """Filter sensors by type or location"""
             sensor_type = request.args.get('type')
             location = request.args.get('location')
@@ -153,7 +236,7 @@ class Routes:
             return create_response(filtered_sensors, links)
 
         @self.app.route('/sensors/<sensor_id>/value')
-        async def get_sensor_value(request, sensor_id):
+        async def sensor_value(request, sensor_id):
             """Read calibrated sensor value"""
             if sensor_id not in self.config.sensors:
                 return create_response(
@@ -183,7 +266,7 @@ class Routes:
             )
 
         @self.app.route('/sensors/<sensor_id>/config', methods=['GET'])
-        async def get_sensor_config(request, sensor_id):
+        async def sensor_config_get(request, sensor_id):
             """Get sensor configuration"""
             if sensor_id not in self.config.sensors:
                 return create_response(
@@ -226,7 +309,7 @@ class Routes:
             return create_response(config_data, links)
 
         @self.app.route('/sensors/<sensor_id>/config', methods=['POST'])
-        async def update_sensor_config(request, sensor_id):
+        async def sensor_config_update(request, sensor_id):
             """Update sensor configuration"""
             if sensor_id not in self.config.sensors:
                 return create_response(
@@ -263,3 +346,155 @@ class Routes:
                     {"error": str(e)},
                     {"self": {"href": f"/sensors/{sensor_id}/config"}}
                 )
+
+
+        @self.app.route('/motors')
+        async def motors_list(request):
+            """Get all motors with their metadata and available actions"""
+            motor_data = {}
+            for motor_id, motor_info in self.config.motors.items():
+                motor_data[motor_id] = {
+                    "type": motor_info["type"],
+                    "location": motor_info["location"],
+                    "_links": {
+                        "self": {"href": f"/motors/{motor_id}"},
+                        "on": {"href": f"/motors/{motor_id}/on"},
+                        "off": {"href": f"/motors/{motor_id}/off"},
+                    }
+                }
+
+            links = {
+                "self": {"href": "/motors"},
+                "filter_by_location": {"href": "/motors/filter?location={location}",
+                                    "templated": True}
+            }
+
+            return create_response(motor_data, links)
+
+        @self.app.route('/motors/filter')
+        async def motors_filter(request):
+            """Filter motors by location"""
+            motor_type = request.args.get('type')
+            location = request.args.get('location')
+
+            filtered_motors = {}
+            for motor_id, motor_info in self.config.motors.items():
+                if ((motor_type and motor_info["type"] == motor_type) or
+                    (location and motor_info["location"] == location) or
+                    (not motor_type and not location)):
+                    filtered_motors[motor_id] = {
+                        "type": motor_info["type"],
+                        "location": motor_info["location"],
+                        "_links": {
+                            "self": {"href": f"/motors/{motor_id}"},
+                            "on": {"href": f"/motors/{motor_id}/on?direction=['cw or 'ccw']&seconds=[seconds to run]"},
+                            "off": {"href": f"/motors/{motor_id}/off"}
+                        }
+                    }
+
+            links = {
+                "self": {"href": f"/motors/filter?type={motor_type or ''}&location={location or ''}"},
+                "all_motors": {"href": "/motors"}
+            }
+
+            return create_response(filtered_motors, links)
+
+        @self.app.route('/motors/<motor_id>')
+        async def motor_state(request, motor_id):
+            """Get motor state"""
+            if motor_id not in self.config.motors:
+                return create_response(
+                    {"error": f"Invalid motor: {motor_id}"},
+                    {"all_motors": {"href": "/motors"}}
+                )
+
+            motor_on = self.config.motors[motor_id]["pin_on"]
+            motor_dir = self.config.motors[motor_id]["pin_dir"]
+
+            return create_response(
+                {
+                    "id": motor_id,
+                    "state": motor_on.value(),
+                    "type": self.config.motors[motor_id]["type"],
+                    "location": self.config.motors[motor_id]["location"]
+                },
+                {
+                    "self": {"href": f"/motors/{motor_id}"},
+                    "on": {"href": f"/motors/{motor_id}/on"},
+                    "off": {"href": f"/motors/{motor_id}/off"},
+                    "all_motors": {"href": "/motors"}
+                }
+            )
+
+        @self.app.route('/motors/<motor_id>/on', methods=['POST'])
+        async def motor_on(request, motor_id):
+            direction = request.args.get('direction')
+            if direction not in ["cw", "ccw"]:
+                direction = "cw" # default to clockwise
+            seconds = request.args.get('seconds')
+            if seconds is None:
+                seconds_int = 0 # default to indefinite
+            else:
+                seconds_int = int(seconds)
+
+            """Turn motor on"""
+            if motor_id not in self.config.motors:
+                return create_response(
+                    {"error": f"Invalid motor: {motor_id}"},
+                    {"all_motors": {"href": "/motors"}}
+                )
+
+            motor_on = self.config.motors[motor_id]["pin_on"]
+            motor_dir = self.config.motors[motor_id]["pin_dir"]
+            if direction == "cw":
+                motor_dir.value(0)
+                motor_on.value(1)
+            else:
+                motor_dir.value(1)
+                motor_on.value(0)
+
+            if seconds_int > 0:
+                await asyncio.sleep(seconds_int)
+                await motor_off(request, motor_id)
+
+            return create_response(
+                {
+                    "id": motor_id,
+                    "state": motor_on.value(),
+                    "type": self.config.motors[motor_id]["type"],
+                    "location": self.config.motors[motor_id]["location"]
+                },
+                {
+                    "self": {"href": f"/motors/{motor_id}/on?direction={direction or ''}&seconds={seconds_int or ''} "},
+                    "motor": {"href": f"/motors/{motor_id}"},
+                    "all_motors": {"href": "/motors"}
+                }
+            )
+
+        @self.app.route('/motors/<motor_id>/off', methods=['POST'])
+        async def motor_off(request, motor_id):
+            """Turn motor off"""
+            if motor_id not in self.config.motors:
+                return create_response(
+                    {"error": f"Invalid motor: {motor_id}"},
+                    {"all_motors": {"href": "/motors"}}
+                )
+
+            motor_on = self.config.motors[motor_id]["pin_on"]
+            motor_dir = self.config.motors[motor_id]["pin_dir"]
+            motor_on.value(0)
+            motor_dir.value(0)
+
+            return create_response(
+                {
+                    "id": motor_id,
+                    "state": motor_on.value(),
+                    "type": self.config.motors[motor_id]["type"],
+                    "location": self.config.motors[motor_id]["location"]
+                },
+                {
+                    "self": {"href": f"/motors/{motor_id}/off"},
+                    "motor": {"href": f"/motors/{motor_id}"},
+                    "all_motors": {"href": "/motors"}
+                }
+            )

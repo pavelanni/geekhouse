@@ -2,3 +2,5 @@ config.json
 config.toml
 *.pyc
 archive
+.venv
+.env

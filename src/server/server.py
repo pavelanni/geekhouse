@@ -27,7 +27,7 @@ class IoTServer:
             # Start the server
             port = self.config_handler.server_config.get('port', 80)
             print(f'Starting HATEOAS-enabled IoT server on http://{ip}:{port}')
-            self.app.run(port=port)
+            self.app.run(port=port, debug=True)
 
         except Exception as e:
             print(f"Server error: {str(e)}")
