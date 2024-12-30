@@ -30,13 +30,13 @@ class IoTController:
 
         return structure
 
-    def _get_curl_command(self, user_input):
-        """Get curl command from Claude for user input"""
+    def _get_function_call(self, user_input):
+        """Get function call from Claude for user input"""
         system_prompt = f"""You are an IoT API assistant. Convert user commands to function calls of the Python requests library to send requests to the IoT server.
 API structure: {json.dumps(self.api_structure, indent=2)}
 Server URL: {self.server_url}
 
-Respond only with the curl command, no explanations."""
+Respond only with the function call, no explanations."""
 
         message = self.anthropic.messages.create(
             model=self.api_model,
@@ -69,39 +69,10 @@ Respond only with the curl command, no explanations."""
         return f"\nResponse: {response}"
 
 
-    def execute_command(self, curl_command):
-        """Execute curl command and return response"""
-        use_json = False
-        data = ""
-        # Parse curl command to get method and endpoint
-        parts = curl_command.split()
-        # DEBUG
-        print(f"Curl command: {curl_command}")
-        print(f"Parts: {parts}")
-        method = "GET"
-        for i, part in enumerate(parts):
-            if part == "-X":
-                method = parts[i + 1]
-            elif "http://" in part:
-                endpoint = part.split(self.server_url)[1]
-            if part == 'application/json"':
-                use_json = True
-                # DEBUG
-                print(f"Use JSON: {use_json}")
-                if parts[i+1] == '-d':
-                    data = parts[i + 2]
-                # DEBUG
-                print(f"Data: {data}")
-
+    def execute_command(self, function_call):
         # Execute request
         try:
-            if method == "GET":
-                response = requests.get(f"{self.server_url}{endpoint}")
-            elif method == "POST":
-                if use_json:
-                    response = requests.post(f"{self.server_url}{endpoint}", json=data)
-                else:
-                    response = requests.post(f"{self.server_url}{endpoint}")
+            response = eval(function_call)
             return response.json()
         except Exception as e:
             return {"error": str(e)}
@@ -130,8 +101,8 @@ Respond only with the curl command, no explanations."""
                     continue
 
                 # Process command as before...
-                curl_command = self._get_curl_command(user_input)
-                response = self.execute_command(curl_command)
+                function_call = self._get_function_call(user_input)
+                response = self.execute_command(function_call)
                 formatted_response = self._format_response(response)
                 print(formatted_response)
 
