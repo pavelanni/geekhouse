@@ -2,9 +2,10 @@ from utils import create_response, apply_calibration
 import json
 import asyncio
 class Routes:
-    def __init__(self, app, config_handler):
+    def __init__(self, app, config_handler, lcd):
         self.app = app
         self.config = config_handler
+        self.lcd = lcd
         self.setup_routes()
 
     def setup_routes(self):
@@ -13,6 +14,7 @@ class Routes:
             """Root endpoint providing API navigation"""
             links = {
                 "self": {"href": "/"},
+                "lcd": {"href": "/lcd"},
                 "leds": {"href": "/leds"},
                 "motors": {"href": "/motors"},
                 "sensors": {"href": "/sensors"},
@@ -498,3 +500,95 @@ class Routes:
                     "all_motors": {"href": "/motors"}
                 }
             )
+
+
+        # Return information about the LCD
+        @self.app.route('/lcd')
+        async def lcd_info(request):
+            """Return information about the LCD and available actions"""
+            lcd_data = {
+                "type": "16x2 LCD Display",
+                "max_chars": 32,
+                "max_lines": 2,
+                "chars_per_line": 16,
+                "current_support": ["text display"],
+                "_links": {
+                    "self": {"href": "/lcd"},
+                    "display": {
+                        "href": "/lcd",
+                        "method": "POST",
+                        "template": {
+                            "text": "string (max 32 chars)"
+                        }
+                    }
+                }
+            }
+
+            return create_response(lcd_data, {
+                "self": {"href": "/lcd"}
+            })
+
+
+        # Display text on LCD
+        # The text is split into two lines if it is longer than 16 characters
+        # and truncated if it's longer than 32 characters
+        @self.app.route('/lcd', methods=['POST'])
+        async def lcd_display(request):
+            """Display text on LCD"""
+            try:
+                # Try to get the text from the JSON body first
+                # DEBUG
+                print(f"Request body: {request.body}")
+                text = request.json.get('text') if request.json else None
+                if text is None:
+                    # If not, try to get it from the query parameters
+                    text = request.args.get('text')
+                    if text is None:
+                        return create_response(
+                        {"error": "Text parameter is required"},
+                        {
+                            "self": {"href": "/lcd"},
+                            "info": {"href": "/lcd", "method": "GET"}
+                        }
+                    )
+
+                if len(text) > 32:
+                    text = text[:32]  # truncate to maximum length
+
+                if len(text) > 16:
+                    self.lcd.clear()
+                    self.lcd.write(0, 0, text[:16])  # first line
+                    self.lcd.write(0, 1, text[16:])  # second line
+                else:
+                    self.lcd.clear()
+                    self.lcd.write(0, 0, text)
+
+                return create_response(
+                    {
+                        "message": "Text displayed on LCD",
+                        "text": text,
+                        "display_info": {
+                            "total_length": len(text),
+                            "lines": 2 if len(text) > 16 else 1
+                        }
+                    },
+                    {
+                        "self": {"href": "/lcd"},
+                        "info": {"href": "/lcd", "method": "GET"},
+                        "update": {
+                            "href": "/lcd",
+                            "method": "POST",
+                            "template": {
+                                "text": "string (max 32 chars)"
+                            }
+                        }
+                    }
+                )
+            except Exception as e:
+                return create_response(
+                    {"error": str(e)},
+                    {
+                        "self": {"href": "/lcd"},
+                        "info": {"href": "/lcd", "method": "GET"}
+                    }
+                )

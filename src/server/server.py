@@ -2,6 +2,7 @@ from microdot import Microdot
 from config_handler import ConfigHandler
 from routes import Routes
 from utils import connect_wifi
+from lcd1602 import LCD
 
 class IoTServer:
     def __init__(self, config_file='config.json'):
@@ -12,8 +13,11 @@ class IoTServer:
         # Load configuration
         self.config_handler.load_config()
 
+        # Initialize LCD
+        self.lcd = LCD()
+
         # Setup routes
-        self.routes = Routes(self.app, self.config_handler)
+        self.routes = Routes(self.app, self.config_handler, self.lcd)
 
     def run(self):
         """Start the server"""

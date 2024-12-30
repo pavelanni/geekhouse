@@ -30,6 +30,10 @@ while IFS= read -r lib || [ -n "$lib" ]; do
     mpremote mip install "$lib"
 done <mp_requirements.txt
 
+# Copy the lcd1602 library
+echo "Copying lcd1602 library..."
+mpremote cp -r lib/lcd1602.py :
+
 # Copy source files
 echo "Copying source files..."
 mpremote cp -r src/server/* :

@@ -32,7 +32,7 @@ class IoTController:
 
     def _get_curl_command(self, user_input):
         """Get curl command from Claude for user input"""
-        system_prompt = f"""You are an IoT API assistant. Convert user commands to curl commands for the IoT server.
+        system_prompt = f"""You are an IoT API assistant. Convert user commands to function calls of the Python requests library to send requests to the IoT server.
 API structure: {json.dumps(self.api_structure, indent=2)}
 Server URL: {self.server_url}
 
@@ -44,6 +44,8 @@ Respond only with the curl command, no explanations."""
             system=system_prompt,
             messages=[{"role": "user", "content": user_input}]
         )
+        # DEBUG
+        print(f"Claude response: {message.content[0].text}")
         return message.content[0].text
 
     def _convert_to_human_language(self, response):
@@ -69,21 +71,37 @@ Respond only with the curl command, no explanations."""
 
     def execute_command(self, curl_command):
         """Execute curl command and return response"""
+        use_json = False
+        data = ""
         # Parse curl command to get method and endpoint
         parts = curl_command.split()
+        # DEBUG
+        print(f"Curl command: {curl_command}")
+        print(f"Parts: {parts}")
         method = "GET"
         for i, part in enumerate(parts):
             if part == "-X":
                 method = parts[i + 1]
             elif "http://" in part:
                 endpoint = part.split(self.server_url)[1]
+            if part == 'application/json"':
+                use_json = True
+                # DEBUG
+                print(f"Use JSON: {use_json}")
+                if parts[i+1] == '-d':
+                    data = parts[i + 2]
+                # DEBUG
+                print(f"Data: {data}")
 
         # Execute request
         try:
             if method == "GET":
                 response = requests.get(f"{self.server_url}{endpoint}")
             elif method == "POST":
-                response = requests.post(f"{self.server_url}{endpoint}")
+                if use_json:
+                    response = requests.post(f"{self.server_url}{endpoint}", json=data)
+                else:
+                    response = requests.post(f"{self.server_url}{endpoint}")
             return response.json()
         except Exception as e:
             return {"error": str(e)}
